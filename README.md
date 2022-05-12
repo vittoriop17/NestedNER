@@ -1,2 +1,2 @@
-# NestedNER
-Course project about Nested Named Entity Recognition. 
+# WikiHowSummarization
+Course project about Text Summarization.

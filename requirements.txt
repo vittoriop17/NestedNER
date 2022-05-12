@@ -1,1 +1,4 @@
 neptune.client
+torch
+spacy
+torchtext
