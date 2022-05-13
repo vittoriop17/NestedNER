@@ -257,7 +257,7 @@ class DecoderRNN(nn.Module):
         e = torch.bmm(self.v.T.repeat(B, 1, 1),
                       torch.tanh((torch.bmm(self.W.repeat(B, 1, 1), encoder_hidden_states.permute(0, 2, 1)) +
                                   (torch.bmm(self.U.repeat(B, 1, 1), last_state.permute(1, 2, 0))))))
-        # e = (torch.tanh(((encoder_hidden_states @ self.W.T) + last_state @ self.U.T)) @ self.v).permute(0, 2, 1)
+        # e = (torch.tanh(((encoder_hidden_states @ self.W.T) + (last_state @ self.U.T).permute(1, 0, 2))) @ self.v).permute(0, 2, 1)
         # compute alphas
         # TODO - alpha.shape: B, 1, MAX_SEQ_LEN
         # TODO - encoder_hidden_states.shape: B, MAX_SEQ_LEN, HIDDEN_SIZE * 2
