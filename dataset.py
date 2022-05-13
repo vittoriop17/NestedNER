@@ -18,6 +18,10 @@ SPECIALS = {
 
 
 class WikiHowDataset(Dataset):
+    """
+    A dataset with source articles and their respective summary
+
+    """
     def __init__(self, titles_path, articles_path=None):
         self.titles_path = titles_path
         self.articles_path = articles_path if articles_path else os.path.join(os.path.dirname(titles_path), "articles")
@@ -53,6 +57,9 @@ class WikiHowDataset(Dataset):
         return len(self.filenames)
 
     def __getitem__(self, item):
+        """
+        :return:  str, str: text_article, text_summary
+        """
         filename = self.filenames[item]
         summary, text_summary = [], ""
         article, text_article = [], ""
