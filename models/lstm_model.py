@@ -163,8 +163,8 @@ def evaluate(args, data_loader, encoder, decoder, neptune_run, test_or_val='val'
         # else:
         #     incorrect_sentences += 1
         metric.add_batch(
-            predictions=list(filter(lambda c: c not in SPECIAL_CHAR_SYMBOLS, predicted_summaries)),
-            references=list(filter(lambda c: c not in SPECIAL_CHAR_SYMBOLS, y)),
+            predictions=list(filter(lambda tens: list(filter(lambda c: c not in SPECIAL_CHAR_IDX, tens)), predicted_summaries)),
+            references=list(filter(lambda tens: list(filter(lambda c: c not in SPECIAL_CHAR_IDX, tens)), y)),
         )
     app_loss = total_loss.detach().item()
     print("\t", datetime.now().strftime("%H:%M:%S"), f"{test_or_val} loss:", app_loss)

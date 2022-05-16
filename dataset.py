@@ -51,7 +51,10 @@ source_i2w.append(UNK_SYMBOL)
 target_w2i[UNK_SYMBOL] = 3
 target_i2w.append(UNK_SYMBOL)
 
-SPECIAL_CHAR_SYMBOLS = [PADDING_SYMBOL, START_SYMBOL, END_SYMBOL, UNK_SYMBOL]
+SPECIAL_CHAR_IDX = [source_w2i[PADDING_SYMBOL],
+                    source_w2i[START_SYMBOL],
+                    source_w2i[END_SYMBOL],
+                    source_w2i[UNK_SYMBOL]]
 
 # Max number of words to be predicted if <END> symbol is not reached
 MAX_PREDICTIONS = 128
