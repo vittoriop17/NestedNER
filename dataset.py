@@ -105,8 +105,10 @@ class SummarizationDataset(Dataset):
         self.source_list = []
         self.target_list = []
         self.max_seq_len = max_seq_len
+        self.k = 0.2
         # Read the datafile
         cont_lines = -1
+        counter_cut_sources, counter_cut_summaries = 0, 0
         with codecs.open(filename, 'r', 'utf-8') as f:
             lines = f.read().split('\n')
             for line in lines:
@@ -117,7 +119,10 @@ class SummarizationDataset(Dataset):
                     continue
                 s, t = line.split('","')
                 source_sentence = []
-                for w in nltk.word_tokenize(s):
+                for idx, w in enumerate(nltk.word_tokenize(s)):
+                    if idx > self.max_seq_len - 1:
+                        counter_cut_sources += 1
+                        break
                     if w not in source_i2w and record_symbols:
                         source_w2i[w] = len(source_i2w)
                         source_i2w.append(w)
@@ -125,13 +130,18 @@ class SummarizationDataset(Dataset):
                 source_sentence.append(source_w2i[END_SYMBOL])
                 self.source_list.append(source_sentence)
                 target_sentence = []
-                for w in nltk.word_tokenize(t):
+                for idx, w in enumerate(nltk.word_tokenize(t)):
+                    if idx > int(self.k * self.max_seq_len) - 1:
+                        counter_cut_summaries += 1
+                        break
                     if w not in target_i2w and record_symbols:
                         target_w2i[w] = len(target_i2w)
                         target_i2w.append(w)
                     target_sentence.append(target_w2i.get(w, target_w2i[UNK_SYMBOL]))
                 target_sentence.append(target_w2i[END_SYMBOL])
                 self.target_list.append(target_sentence)
+        print(f"Number of cut input sources: {counter_cut_sources}")
+        print(f"Number of cut input summaries: {counter_cut_summaries}")
 
     def __len__(self):
         return len(self.source_list)
