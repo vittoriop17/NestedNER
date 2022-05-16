@@ -267,10 +267,9 @@ class DecoderLSTM(nn.Module):
 def evaluate(ds, encoder, decoder):
     confusion = [[0 for a in target_i2w] for b in target_i2w]
     correct_sentences, incorrect_sentences = 0, 0
-    all_predicted_sentences, all_real_sentences = [], []
+    metric = load_metric("rouge")
     for x, y in ds:
         predicted_sentence = []
-        real_sentence = y
         outputs, hidden, cell = encoder([x])
         if encoder.is_bidirectional:
             hidden = hidden.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
@@ -285,8 +284,10 @@ def evaluate(ds, encoder, decoder):
             correct_sentences += 1
         else:
             incorrect_sentences += 1
-        all_predicted_sentences.append(predicted_sentence)
-        all_real_sentences.append(real_sentence)
+        metric.add(
+            predictions=predicted_sentence,
+            references=y,
+        )
     correct_symbols = sum([confusion[i][i] for i in range(len(confusion))])
     all_symbols = torch.tensor(confusion).sum().item()
 
@@ -305,18 +306,11 @@ def evaluate(ds, encoder, decoder):
     print("Incorrectly predicted sentences: ", incorrect_sentences)
 
     print("Rouge metrics:\n")
-
-    metric = load_metric("rouge")
-    metric.add_batch(
-        predictions=all_predicted_sentences,
-        references=all_real_sentences,
-    )
     result = metric.compute(use_stemmer=True)
     # Extract a few results from ROUGE
     result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
-
     result = {k: round(v, 4) for k, v in result.items()}
-
+    print(f"\033[1;32m{json.dumps(result, indent=4)}\033[0m")
     print()
 
 
