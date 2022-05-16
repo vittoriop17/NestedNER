@@ -1,4 +1,4 @@
-from models.lstm_model import *
+from lstm_model import *
 
 
 def read_args():
