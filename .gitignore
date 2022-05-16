@@ -1,3 +1,7 @@
 wikihowAll.csv
 WikiHow-Dataset
 venv
+process-dataset/articles
+process-dataset/all_test.txt
+process-dataset/all_val.txt
+process-dataset/all_train.txt
