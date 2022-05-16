@@ -116,76 +116,47 @@ class DecoderLSTM(nn.Module):
 
 
 # ======================================== #
-
-def evaluate(args, data_loader, encoder, decoder, neptune_run, test_or_val='val'):
+def evaluate(ds, encoder, decoder):
     confusion = [[0 for a in target_i2w] for b in target_i2w]
     correct_sentences, incorrect_sentences = 0, 0
     metric = load_metric("rouge")
-    criterion = nn.CrossEntropyLoss()
-    for x, y in data_loader:
+    for x, y in ds:
         predicted_sentence = []
-        outputs, hidden, cell = encoder(x)
+        outputs, hidden, cell = encoder([x])
         if encoder.is_bidirectional:
-            hidden = torch.cat([hidden[0, :, :], hidden[1, :, :]], dim=1).unsqueeze(0)
-            cell = torch.cat([cell[0, :, :], cell[1, :, :]], dim=1).unsqueeze(0)
-            # hidden = hidden.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
-            # cell = cell.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
-        idx = [target_w2i[START_SYMBOL] for sublist in y]
-        predicted_symbol = [target_w2i[START_SYMBOL] for sublist in y]
-        total_loss = 0
-        target_length = len(y[0])
-        predicted_summaries = torch.zeros((len(y), target_length))
-        for i in range(target_length):
-            loss = 0
-            predictions, hidden, cell = decoder(inp=predicted_symbol, hidden_state=hidden, cell_state=cell,
-                                                    encoder_outputs=outputs)
+            hidden = hidden.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
+            cell = cell.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
+        predicted_symbol = target_w2i[START_SYMBOL]
+        for correct in y:
+            predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs)
             _, predicted_tensor = predictions.topk(1)
-            predicted_symbol = predicted_tensor.squeeze().tolist()
-            predicted_summaries[:, i] = torch.tensor(predicted_symbol)
-            # The targets will be the ith symbol of all the target
-            # strings. They will also be used as inputs for the next
-            # time step if we use teacher forcing.
-            idx = [sublist[i] for sublist in y]
-            loss += criterion(predictions.squeeze(), torch.tensor(idx).to(args.device))
-        loss /= (target_length * args.batch_size)
-        total_loss += loss
-        neptune_run[f'{test_or_val}/batch_loss'].log(loss.detach().item())
-
-        # predicted_symbol = target_w2i[START_SYMBOL]
-        # for correct in y:
-        #     predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs)
-        #     _, predicted_tensor = predictions.topk(1)
-        #     predicted_symbol = predicted_tensor.detach().item()
-        #     confusion[int(predicted_symbol)][int(correct)] += 1
-        #     predicted_sentence.append(predicted_symbol)
-        # if predicted_sentence == y:
-        #     correct_sentences += 1
-        # else:
-        #     incorrect_sentences += 1
-        metric.add_batch(
-            predictions=list(filter(lambda tens: list(filter(lambda c: c not in SPECIAL_CHAR_IDX, tens)), predicted_summaries)),
-            references=list(filter(lambda tens: list(filter(lambda c: c not in SPECIAL_CHAR_IDX, tens)), y)),
+            predicted_symbol = predicted_tensor.detach().item()
+            confusion[int(predicted_symbol)][int(correct)] += 1
+            predicted_sentence.append(predicted_symbol)
+        if predicted_sentence == y:
+            correct_sentences += 1
+        else:
+            incorrect_sentences += 1
+        metric.add(
+            predictions=list(filter(lambda c: c not in SPECIAL_CHAR_IDX, predicted_sentence)),
+            references=list(filter(lambda c: c not in SPECIAL_CHAR_IDX, y)),
         )
-    app_loss = total_loss.detach().item()
-    print("\t", datetime.now().strftime("%H:%M:%S"), f"{test_or_val} loss:", app_loss)
-    neptune_run['train/epoch_loss'].log(app_loss)
-    total_loss = 0
-    # correct_symbols = sum([confusion[i][i] for i in range(len(confusion))])
-    # all_symbols = torch.tensor(confusion).sum().item()
-    #
-    # # Construct a neat confusion matrix
-    # for i in range(len(confusion)):
-    #     confusion[i].insert(0, target_i2w[i])
-    # first_row = ["Predicted/Real"]
-    # first_row.extend(target_i2w)
-    # confusion.insert(0, first_row)
-    # # t = AsciiTable( confusion )
-    #
-    # # print( t.table )
-    # print("Correctly predicted words    : ", correct_symbols)
-    # print("Incorrectly predicted words  : ", all_symbols - correct_symbols)
-    # print("Correctly predicted sentences  : ", correct_sentences)
-    # print("Incorrectly predicted sentences: ", incorrect_sentences)
+    correct_symbols = sum([confusion[i][i] for i in range(len(confusion))])
+    all_symbols = torch.tensor(confusion).sum().item()
+
+    # Construct a neat confusion matrix
+    for i in range(len(confusion)):
+        confusion[i].insert(0, target_i2w[i])
+    first_row = ["Predicted/Real"]
+    first_row.extend(target_i2w)
+    confusion.insert(0, first_row)
+    # t = AsciiTable( confusion )
+
+    # print( t.table )
+    print("Correctly predicted words    : ", correct_symbols)
+    print("Incorrectly predicted words  : ", all_symbols - correct_symbols)
+    print("Correctly predicted sentences  : ", correct_sentences)
+    print("Incorrectly predicted sentences: ", incorrect_sentences)
 
     print("Rouge metrics:\n")
     result = metric.compute(use_stemmer=True)
@@ -193,8 +164,4 @@ def evaluate(args, data_loader, encoder, decoder, neptune_run, test_or_val='val'
     result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
     result = {k: round(v, 4) for k, v in result.items()}
     print(f"\033[1;32m{json.dumps(result, indent=4)}\033[0m")
-    neptune_run[f"{test_or_val}/rouge1"].log(result['rouge1'])
-    neptune_run[f"{test_or_val}/rouge2"].log(result['rouge2'])
-    neptune_run[f"{test_or_val}/rougeL"].log(result['rougeL'])
     print()
-
