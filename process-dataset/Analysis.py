@@ -1,6 +1,7 @@
 
 import argparse
 import string
+import seaborn as sn
 import codecs
 import csv
 from tqdm import tqdm
@@ -12,6 +13,7 @@ from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils import clip_grad_norm_
 import matplotlib.pyplot as plt
+from statistics import mean
 
 
 
@@ -35,30 +37,42 @@ class LoadDataset(Dataset):
 
     def analysis(self):
         no_of_tokens=dict()
+        temp=list()
+
+        line_to_text=list()
+        line_to_summary=list()
 
         for line in self.sentences[1:]:
             new_string = line.translate(str.maketrans('', '', string.punctuation))
             no_of_tokens[(len(new_string.split()))]=no_of_tokens.get((len(new_string.split())),0)+1
-            if((len(new_string.split())))==0:
-                print('here')
+            line_to_text.append(len(new_string.split()))
+            
 
         
 
-        
+        print(len(no_of_tokens.values()))
 
         
         tokens = list(no_of_tokens.keys())
         texts = list(no_of_tokens.values())
 
-        plt.bar(range(len(tokens)), texts)
+     
+
+        plt.bar(tokens, texts,width=20)
+        #plt.xticks((1000,2000,3000,4000,5000), fontsize = 18)
         plt.xticks((0,100,200,300,400,500,600,700,800), fontsize = 18)
         plt.xlabel('tokens')
         plt.ylabel('texts')
         plt.show()
 
+    
+        
+    
+    
         for line in self.labels[1:] :
             new_string = line.translate(str.maketrans('', '', string.punctuation))
             no_of_tokens[(len(new_string.split()))]=no_of_tokens.get((len(new_string.split())),0)+1
+            line_to_summary.append((len(new_string.split())))
 
         
 
@@ -68,11 +82,26 @@ class LoadDataset(Dataset):
         tokens = list(no_of_tokens.keys())
         texts = list(no_of_tokens.values())
 
-        plt.bar(range(len(tokens)), texts)
+        plt.bar(range(len(tokens)), texts,width=2)
         plt.xticks((0,100,200,300,400,500,600,700,800), fontsize = 18)
         plt.xlabel('tokens')
         plt.ylabel('summaries')
         plt.show()
+
+        res = [i / j for i, j in zip(line_to_summary, line_to_text)]
+
+        plt.hist(res, density=True, bins=30)
+        plt.show()
+        print(mean(res))
+
+        #plt.bar( range(len(res)),height=res)
+        #plt.show()
+
+
+
+
+
+
 
 
                     
