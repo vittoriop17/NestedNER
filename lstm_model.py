@@ -98,7 +98,7 @@ class DecoderLSTM(nn.Module):
 
     def _compute_context(self, encoder_hidden_states, last_state, idx):
         left_lim = max(0, idx - int(self.window_size/2))
-        right_lim = min(encoder_hidden_states.shape[1], idx + int(self.windows_size/2))
+        right_lim = min(encoder_hidden_states.shape[1], idx + int(self.window_size/2))
         encoder_hidden_states = encoder_hidden_states[:, left_lim:right_lim, :]
         B, MAX_SEQ_LEN, ENCODER_HIDDEN_SIZE = encoder_hidden_states.shape
         # encoder_hidden_states shape: B, MAX_SEQ_LEN, HIDDEN_SIZE * 2
