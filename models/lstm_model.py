@@ -50,6 +50,8 @@ source_i2w.append(UNK_SYMBOL)
 target_w2i[UNK_SYMBOL] = 3
 target_i2w.append(UNK_SYMBOL)
 
+SPECIAL_CHAR_SYMBOLS = [PADDING_SYMBOL, START_SYMBOL, END_SYMBOL, UNK_SYMBOL]
+
 # Max number of words to be predicted if <END> symbol is not reached
 MAX_PREDICTIONS = 128
 
@@ -273,6 +275,7 @@ def evaluate(ds, encoder, decoder):
         outputs, hidden, cell = encoder([x])
         if encoder.is_bidirectional:
             hidden = hidden.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
+            cell = cell.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
         predicted_symbol = target_w2i[START_SYMBOL]
         for correct in y:
             predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs)
@@ -285,8 +288,8 @@ def evaluate(ds, encoder, decoder):
         else:
             incorrect_sentences += 1
         metric.add(
-            predictions=predicted_sentence,
-            references=y,
+            predictions=list(filter(lambda c: c not in SPECIAL_CHAR_SYMBOLS, predicted_sentence)),
+            references=list(filter(lambda c: c not in SPECIAL_CHAR_SYMBOLS, y)),
         )
     correct_symbols = sum([confusion[i][i] for i in range(len(confusion))])
     all_symbols = torch.tensor(confusion).sum().item()
