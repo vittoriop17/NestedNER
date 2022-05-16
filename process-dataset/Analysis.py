@@ -91,7 +91,9 @@ class LoadDataset(Dataset):
         res = [i / j for i, j in zip(line_to_summary, line_to_text)]
 
         plt.hist(res, density=True, bins=30)
+        plt.xlabel('ratio of length of summaries to length of text')
         plt.show()
+        
         print(mean(res))
 
         #plt.bar( range(len(res)),height=res)
