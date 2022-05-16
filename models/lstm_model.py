@@ -124,7 +124,7 @@ def evaluate(args, data_loader, encoder, decoder, neptune_run, test_or_val='val'
     criterion = nn.CrossEntropyLoss()
     for x, y in data_loader:
         predicted_sentence = []
-        outputs, hidden, cell = encoder([x])
+        outputs, hidden, cell = encoder(x)
         if encoder.is_bidirectional:
             hidden = torch.cat([hidden[0, :, :], hidden[1, :, :]], dim=1).unsqueeze(0)
             cell = torch.cat([cell[0, :, :], cell[1, :, :]], dim=1).unsqueeze(0)
