@@ -45,7 +45,7 @@ class EncoderLSTM(nn.Module):
 class DecoderLSTM(nn.Module):
 
     def __init__(self, no_of_output_symbols, embedding_size=16, hidden_size=25, use_attention=True,
-                 display_attention=False, device='cpu', window_size=10):
+                 display_attention=False, device='cpu', window_size=50, slide=10):
         super(DecoderLSTM, self).__init__()
         self.embedding = nn.Embedding(no_of_output_symbols, embedding_size)
         self.no_of_output_symbols = no_of_output_symbols
@@ -53,6 +53,7 @@ class DecoderLSTM(nn.Module):
         self.U = nn.Parameter(torch.rand(hidden_size, hidden_size) - 0.5)
         self.v = nn.Parameter(torch.rand(hidden_size, 1) - 0.5)
         self.window_size = window_size
+        self.slide = slide
         self.use_attention = use_attention
         self.display_attention = display_attention
         self.lstm = nn.LSTM(embedding_size, hidden_size, batch_first=True)
@@ -97,8 +98,8 @@ class DecoderLSTM(nn.Module):
             return self.output(lstm_output), h, c
 
     def _compute_context(self, encoder_hidden_states, last_state, idx):
-        left_lim = max(0, idx - int(self.window_size/2))
-        right_lim = min(encoder_hidden_states.shape[1], idx + int(self.window_size/2))
+        left_lim = max(0, (idx * self.slide) - int(self.window_size / 2))
+        right_lim = min(encoder_hidden_states.shape[1], (idx * self.slide) + int(self.window_size / 2))
         encoder_hidden_states = encoder_hidden_states[:, left_lim:right_lim, :]
         B, MAX_SEQ_LEN, ENCODER_HIDDEN_SIZE = encoder_hidden_states.shape
         # encoder_hidden_states shape: B, MAX_SEQ_LEN, HIDDEN_SIZE * 2
@@ -131,8 +132,8 @@ def evaluate(ds, encoder, decoder, args, test_or_val='val', neptune_run=None):
             hidden = hidden.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
             cell = cell.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
         predicted_symbol = target_w2i[START_SYMBOL]
-        for correct in y:
-            predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs)
+        for idx, correct in enumerate(y):
+            predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs, idx)
             _, predicted_tensor = predictions.topk(1)
             predicted_symbol = predicted_tensor.detach().item()
             confusion[int(predicted_symbol)][int(correct)] += 1
