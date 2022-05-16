@@ -184,8 +184,8 @@ class EncoderLSTM(nn.Module):
         """
         B, T = len(x), len(x[0])
         word_embeddings = self.embedding(torch.tensor(x).to(self.device)).view(B, T, self.embedding_size)
-        output, h_n = self.lstm(word_embeddings)
-        return output, h_n
+        output, (h, c) = self.lstm(word_embeddings)
+        return output, h, c
 
 
 # ==================== Decoder ==================== #
@@ -207,7 +207,7 @@ class DecoderLSTM(nn.Module):
         self.device = device
         self.to(device)
 
-    def forward(self, inp, hidden, encoder_outputs):
+    def forward(self, inp, hidden_state, cell_state, encoder_outputs):
         """
         'input' is a list of length batch_size, containing the current word
         of each sentence in the batch
@@ -233,15 +233,15 @@ class DecoderLSTM(nn.Module):
         B = len(inp)
         word_embeddings = self.embedding(torch.tensor(inp).to(self.device)).view(B, 1, -1)
         if self.use_attention:
-            context, alpha = self._compute_context(encoder_outputs, hidden)
+            context, alpha = self._compute_context(encoder_outputs, hidden_state)
             context = context.view(1, B, -1)
-            rnn_output, h_n = self.lstm(word_embeddings, context)
+            lstm_output, (h, c) = self.lstm(word_embeddings, context, cell_state)
         else:
-            rnn_output, h_n = self.lstm(word_embeddings, hidden)
+            lstm_output, (h, c) = self.lstm(word_embeddings, hidden_state, cell_state)
         if self.use_attention and self.display_attention:
-            return self.output(rnn_output), h_n, alpha
+            return self.output(lstm_output), h, c, alpha
         else:
-            return self.output(rnn_output), h_n
+            return self.output(lstm_output), h, c
 
     def _compute_context(self, encoder_hidden_states, last_state):
         # compute e_ij = v' * tanh(WH + Us)
@@ -434,7 +434,7 @@ if __name__ == '__main__':
                 decoder_optimizer.zero_grad()
                 loss = 0
                 # hidden is (D * num_layers, B, H)
-                outputs, hidden = encoder(source)
+                outputs, hidden, cell = encoder(source)
                 if args.bidirectional:
                     hidden = torch.cat([hidden[0, :, :], hidden[1, :, :]], dim=1).unsqueeze(0)
 
@@ -548,10 +548,10 @@ if __name__ == '__main__':
         num_attempts = 0
         while num_attempts < MAX_PREDICTIONS:
             if use_attention:
-                predictions, hidden, alpha = decoder([predicted_symbol], hidden, outputs)
+                predictions, hidden, cell, alpha = decoder([predicted_symbol], hidden, cell, outputs)
                 attention_probs.append(alpha.permute(0, 2, 1).squeeze().detach().tolist())
             else:
-                predictions, hidden = decoder([predicted_symbol], hidden, outputs)
+                predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs)
 
             _, predicted_tensor = predictions.topk(1)
             predicted_symbol = predicted_tensor.detach().item()
