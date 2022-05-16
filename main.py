@@ -191,7 +191,8 @@ if __name__=='__main__':
             run['train/epoch_loss'].log(app_loss)
             total_loss = 0
             # print("Evaluating on the dev data...")
-            evaluate(dev_dataset, encoder, decoder, args, "val", run)
+            if epoch % 10 == 0:
+                evaluate(dev_dataset, encoder, decoder, args, "val", run)
 
         # ==================== Save the model  ==================== #
 

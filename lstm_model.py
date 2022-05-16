@@ -120,7 +120,7 @@ def evaluate(ds, encoder, decoder, args, test_or_val='val', neptune_run=None):
     correct_sentences, incorrect_sentences = 0, 0
     metric = load_metric("rouge")
     total_loss = 0
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
     for x, y in ds:
         loss = 0
         predicted_sentence = []
@@ -135,9 +135,9 @@ def evaluate(ds, encoder, decoder, args, test_or_val='val', neptune_run=None):
             predicted_symbol = predicted_tensor.detach().item()
             confusion[int(predicted_symbol)][int(correct)] += 1
             predicted_sentence.append(predicted_symbol)
-            loss += criterion(predictions.squeeze(), torch.tensor(correct).to(args.device))
-        loss /= (len(y))
-        total_loss += loss
+            # loss += criterion(predictions.squeeze(), torch.tensor(correct).to(args.device))
+        # loss /= (len(y))
+        # total_loss += loss
         if predicted_sentence == y:
             correct_sentences += 1
         else:
@@ -146,8 +146,8 @@ def evaluate(ds, encoder, decoder, args, test_or_val='val', neptune_run=None):
             predictions=list(filter(lambda c: c not in SPECIAL_CHAR_IDX, predicted_sentence)),
             references=list(filter(lambda c: c not in SPECIAL_CHAR_IDX, y)),
         )
-    app_loss = total_loss.detach().item()
-    neptune_run[f'{test_or_val}/epoch_loss'].log(app_loss)
+    # app_loss = total_loss.detach().item()
+    # neptune_run[f'{test_or_val}/epoch_loss'].log(app_loss)
     correct_symbols = sum([confusion[i][i] for i in range(len(confusion))])
     all_symbols = torch.tensor(confusion).sum().item()
 
