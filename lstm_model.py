@@ -115,7 +115,7 @@ class DecoderLSTM(nn.Module):
 
 
 # ======================================== #
-def evaluate(ds, encoder, decoder, test_or_val='val', neptune_run=None):
+def evaluate(ds, encoder, decoder, args, test_or_val='val', neptune_run=None):
     confusion = [[0 for a in target_i2w] for b in target_i2w]
     correct_sentences, incorrect_sentences = 0, 0
     metric = load_metric("rouge")
@@ -135,7 +135,7 @@ def evaluate(ds, encoder, decoder, test_or_val='val', neptune_run=None):
             predicted_symbol = predicted_tensor.detach().item()
             confusion[int(predicted_symbol)][int(correct)] += 1
             predicted_sentence.append(predicted_symbol)
-            loss += criterion(predictions.squeeze(), correct)
+            loss += criterion(predictions.squeeze(), torch.tensor(correct).to(args.device))
         loss /= (len(y))
         total_loss += loss
         if predicted_sentence == y:

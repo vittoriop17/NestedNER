@@ -191,7 +191,7 @@ if __name__=='__main__':
             run['train/epoch_loss'].log(app_loss)
             total_loss = 0
             # print("Evaluating on the dev data...")
-            evaluate(dev_dataset, encoder, decoder, "val", run)
+            evaluate(dev_dataset, encoder, decoder, args, "val", run)
 
         # ==================== Save the model  ==================== #
 
@@ -239,7 +239,7 @@ if __name__=='__main__':
     test_dataset = SummarizationDataset(args.test, args.max_source_len, record_symbols=False)
     print("Number of test sentences: ", len(test_dataset))
     print()
-    evaluate(test_dataset, encoder, decoder, 'test', run)
+    evaluate(test_dataset, encoder, decoder, args, 'test', run)
 
     # ==================== User interaction ==================== #
 
