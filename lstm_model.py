@@ -45,13 +45,14 @@ class EncoderLSTM(nn.Module):
 class DecoderLSTM(nn.Module):
 
     def __init__(self, no_of_output_symbols, embedding_size=16, hidden_size=25, use_attention=True,
-                 display_attention=False, device='cpu'):
+                 display_attention=False, device='cpu', window_size=10):
         super(DecoderLSTM, self).__init__()
         self.embedding = nn.Embedding(no_of_output_symbols, embedding_size)
         self.no_of_output_symbols = no_of_output_symbols
         self.W = nn.Parameter(torch.rand(hidden_size, hidden_size) - 0.5)
         self.U = nn.Parameter(torch.rand(hidden_size, hidden_size) - 0.5)
         self.v = nn.Parameter(torch.rand(hidden_size, 1) - 0.5)
+        self.window_size = window_size
         self.use_attention = use_attention
         self.display_attention = display_attention
         self.lstm = nn.LSTM(embedding_size, hidden_size, batch_first=True)
@@ -59,7 +60,7 @@ class DecoderLSTM(nn.Module):
         self.device = device
         self.to(device)
 
-    def forward(self, inp, hidden_state, cell_state, encoder_outputs):
+    def forward(self, inp, hidden_state, cell_state, encoder_outputs, idx):
         """
         'input' is a list of length batch_size, containing the current word
         of each sentence in the batch
@@ -85,7 +86,7 @@ class DecoderLSTM(nn.Module):
         B = len(inp)
         word_embeddings = self.embedding(torch.tensor(inp).to(self.device)).view(B, 1, -1)
         if self.use_attention:
-            context, alpha = self._compute_context(encoder_outputs, hidden_state)
+            context, alpha = self._compute_context(encoder_outputs, hidden_state, idx)
             context = context.view(1, B, -1)
             lstm_output, (h, c) = self.lstm(word_embeddings, (context, cell_state))
         else:
@@ -95,9 +96,10 @@ class DecoderLSTM(nn.Module):
         else:
             return self.output(lstm_output), h, c
 
-    def _compute_context(self, encoder_hidden_states, last_state):
-        # compute e_ij = v' * tanh(WH + Us)
-        # actually the coeffs e_ij are computed all at the same time. For the whole batch
+    def _compute_context(self, encoder_hidden_states, last_state, idx):
+        left_lim = max(0, idx - int(self.window_size/2))
+        right_lim = min(encoder_hidden_states.shape[1], idx + int(self.windows_size/2))
+        encoder_hidden_states = encoder_hidden_states[:, left_lim:right_lim, :]
         B, MAX_SEQ_LEN, ENCODER_HIDDEN_SIZE = encoder_hidden_states.shape
         # encoder_hidden_states shape: B, MAX_SEQ_LEN, HIDDEN_SIZE * 2
         # TODO - e.shape: B, HIDDEN_SIZE, MAX_SEQ_LEN

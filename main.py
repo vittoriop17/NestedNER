@@ -167,11 +167,11 @@ if __name__=='__main__':
                 for i in range(target_length):
                     use_teacher_forcing = (random.random() < teacher_forcing_ratio)
                     if use_teacher_forcing:
-                        predictions, hidden, cell = decoder(inp=idx, hidden_state=hidden, cell_state=cell, encoder_outputs=outputs)
+                        predictions, hidden, cell = decoder(inp=idx, hidden_state=hidden, cell_state=cell, encoder_outputs=outputs, idx=i)
                     else:
                         # Here we input the previous prediction rather than the
                         # correct symbol.
-                        predictions, hidden, cell = decoder(inp=predicted_symbol, hidden_state=hidden, cell_state=cell, encoder_outputs=outputs)
+                        predictions, hidden, cell = decoder(inp=predicted_symbol, hidden_state=hidden, cell_state=cell, encoder_outputs=outputs, idx=i)
                     _, predicted_tensor = predictions.topk(1)
                     predicted_symbol = predicted_tensor.squeeze().tolist()
 
@@ -265,10 +265,10 @@ if __name__=='__main__':
         num_attempts = 0
         while num_attempts < MAX_PREDICTIONS:
             if use_attention:
-                predictions, hidden, cell, alpha = decoder([predicted_symbol], hidden, cell, outputs)
+                predictions, hidden, cell, alpha = decoder([predicted_symbol], hidden, cell, outputs, idx=num_attempts)
                 attention_probs.append(alpha.permute(0, 2, 1).squeeze().detach().tolist())
             else:
-                predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs)
+                predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs, idx=num_attempts)
 
             _, predicted_tensor = predictions.topk(1)
             predicted_symbol = predicted_tensor.detach().item()
