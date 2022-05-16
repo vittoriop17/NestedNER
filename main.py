@@ -95,8 +95,8 @@ if __name__=='__main__':
         use_attention = args.attention
 
         # Read datasets
-        training_dataset = SummarizationDataset(args.train)
-        dev_dataset = SummarizationDataset(args.dev, record_symbols=False)
+        training_dataset = SummarizationDataset(args.train, args.max_source_len)
+        dev_dataset = SummarizationDataset(args.dev, args.max_source_len, record_symbols=False)
 
         print("Number of source words: ", len(source_i2w))
         print("Number of target words: ", len(target_i2w))
@@ -191,7 +191,7 @@ if __name__=='__main__':
             run['train/epoch_loss'].log(app_loss)
             total_loss = 0
             # print("Evaluating on the dev data...")
-            evaluate(dev_dataset, encoder, decoder)
+            evaluate(dev_dataset, encoder, decoder, "val", run)
 
         # ==================== Save the model  ==================== #
 
@@ -236,10 +236,10 @@ if __name__=='__main__':
     decoder.eval()
     print("Evaluating on the test data...")
 
-    test_dataset = SummarizationDataset(args.test, record_symbols=False)
+    test_dataset = SummarizationDataset(args.test, args.max_source_len, record_symbols=False)
     print("Number of test sentences: ", len(test_dataset))
     print()
-    evaluate(test_dataset, encoder, decoder)
+    evaluate(test_dataset, encoder, decoder, 'test', run)
 
     # ==================== User interaction ==================== #
 
