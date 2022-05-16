@@ -9,7 +9,7 @@ import nltk
 import torch
 import numpy as np
 from pprint import pprint
-
+from datasets import load_metric
 import torch
 import torch.nn.functional as F
 from torch import nn, optim
@@ -235,9 +235,9 @@ class DecoderLSTM(nn.Module):
         if self.use_attention:
             context, alpha = self._compute_context(encoder_outputs, hidden_state)
             context = context.view(1, B, -1)
-            lstm_output, (h, c) = self.lstm(word_embeddings, context, cell_state)
+            lstm_output, (h, c) = self.lstm(word_embeddings, (context, cell_state))
         else:
-            lstm_output, (h, c) = self.lstm(word_embeddings, hidden_state, cell_state)
+            lstm_output, (h, c) = self.lstm(word_embeddings, (hidden_state, cell_state))
         if self.use_attention and self.display_attention:
             return self.output(lstm_output), h, c, alpha
         else:
@@ -267,14 +267,16 @@ class DecoderLSTM(nn.Module):
 def evaluate(ds, encoder, decoder):
     confusion = [[0 for a in target_i2w] for b in target_i2w]
     correct_sentences, incorrect_sentences = 0, 0
+    all_predicted_sentences, all_real_sentences = [], []
     for x, y in ds:
         predicted_sentence = []
-        outputs, hidden = encoder([x])
+        real_sentence = y
+        outputs, hidden, cell = encoder([x])
         if encoder.is_bidirectional:
             hidden = hidden.permute((1, 0, 2)).reshape(1, -1).unsqueeze(0)
         predicted_symbol = target_w2i[START_SYMBOL]
         for correct in y:
-            predictions, hidden = decoder([predicted_symbol], hidden, outputs)
+            predictions, hidden, cell = decoder([predicted_symbol], hidden, cell, outputs)
             _, predicted_tensor = predictions.topk(1)
             predicted_symbol = predicted_tensor.detach().item()
             confusion[int(predicted_symbol)][int(correct)] += 1
@@ -283,6 +285,8 @@ def evaluate(ds, encoder, decoder):
             correct_sentences += 1
         else:
             incorrect_sentences += 1
+        all_predicted_sentences.append(predicted_sentence)
+        all_real_sentences.append(real_sentence)
     correct_symbols = sum([confusion[i][i] for i in range(len(confusion))])
     all_symbols = torch.tensor(confusion).sum().item()
 
@@ -299,6 +303,20 @@ def evaluate(ds, encoder, decoder):
     print("Incorrectly predicted words  : ", all_symbols - correct_symbols)
     print("Correctly predicted sentences  : ", correct_sentences)
     print("Incorrectly predicted sentences: ", incorrect_sentences)
+
+    print("Rouge metrics:\n")
+
+    metric = load_metric("rouge")
+    metric.add_batch(
+        predictions=all_predicted_sentences,
+        references=all_real_sentences,
+    )
+    result = metric.compute(use_stemmer=True)
+    # Extract a few results from ROUGE
+    result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
+
+    result = {k: round(v, 4) for k, v in result.items()}
+
     print()
 
 
@@ -425,6 +443,10 @@ if __name__ == '__main__':
 
         encoder.train()
         decoder.train()
+
+        # Metric
+        metric = load_metric("rouge")
+
         print(datetime.now().strftime("%H:%M:%S"), "Starting training.")
 
         for epoch in range(args.epochs):
@@ -437,6 +459,7 @@ if __name__ == '__main__':
                 outputs, hidden, cell = encoder(source)
                 if args.bidirectional:
                     hidden = torch.cat([hidden[0, :, :], hidden[1, :, :]], dim=1).unsqueeze(0)
+                    cell = torch.cat([cell[0, :, :], cell[1, :, :]], dim=1).unsqueeze(0)
 
                 # The probability of doing teacher forcing will decrease
                 # from 1 to 0 over the range of epochs.
@@ -452,11 +475,11 @@ if __name__ == '__main__':
                 for i in range(target_length):
                     use_teacher_forcing = (random.random() < teacher_forcing_ratio)
                     if use_teacher_forcing:
-                        predictions, hidden = decoder(idx, hidden, outputs)
+                        predictions, hidden, cell = decoder(inp=idx, hidden_state=hidden, cell_state=cell, encoder_outputs=outputs)
                     else:
                         # Here we input the previous prediction rather than the
                         # correct symbol.
-                        predictions, hidden = decoder(predicted_symbol, hidden, outputs)
+                        predictions, hidden, cell = decoder(inp=predicted_symbol, hidden_state=hidden, cell_state=cell, encoder_outputs=outputs)
                     _, predicted_tensor = predictions.topk(1)
                     predicted_symbol = predicted_tensor.squeeze().tolist()
 
