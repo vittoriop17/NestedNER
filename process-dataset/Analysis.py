@@ -60,7 +60,7 @@ class LoadDataset(Dataset):
 
         plt.bar(tokens, texts,width=20)
         #plt.xticks((1000,2000,3000,4000,5000), fontsize = 18)
-        plt.xticks((0,100,200,300,400,500,600,700,800), fontsize = 18)
+        #plt.xticks((0,100,200,300,400,500,600,700,800), fontsize = 18)
         plt.xlabel('tokens')
         plt.ylabel('texts')
         plt.show()
