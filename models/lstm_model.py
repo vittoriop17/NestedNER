@@ -134,13 +134,14 @@ def evaluate(args, data_loader, encoder, decoder, neptune_run, test_or_val='val'
         predicted_symbol = [target_w2i[START_SYMBOL] for sublist in y]
         total_loss = 0
         target_length = len(y[0])
+        predicted_summaries = torch.zeros((len(y), target_length))
         for i in range(target_length):
             loss = 0
             predictions, hidden, cell = decoder(inp=predicted_symbol, hidden_state=hidden, cell_state=cell,
                                                     encoder_outputs=outputs)
             _, predicted_tensor = predictions.topk(1)
             predicted_symbol = predicted_tensor.squeeze().tolist()
-
+            predicted_summaries[:, i] = torch.tensor(predicted_symbol)
             # The targets will be the ith symbol of all the target
             # strings. They will also be used as inputs for the next
             # time step if we use teacher forcing.
@@ -162,7 +163,7 @@ def evaluate(args, data_loader, encoder, decoder, neptune_run, test_or_val='val'
         # else:
         #     incorrect_sentences += 1
         metric.add_batch(
-            predictions=list(filter(lambda c: c not in SPECIAL_CHAR_SYMBOLS, predicted_sentence)),
+            predictions=list(filter(lambda c: c not in SPECIAL_CHAR_SYMBOLS, predicted_summaries)),
             references=list(filter(lambda c: c not in SPECIAL_CHAR_SYMBOLS, y)),
         )
     app_loss = total_loss.detach().item()
