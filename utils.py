@@ -43,3 +43,39 @@ def read_args():
     print("\033[1;32mArguments:\n\033[0m")
     print(f"\033[1;32m{json.dumps(args.__dict__, indent=4)}\033[0m")
     return args
+
+
+def save_model(encoder, decoder, args, epoch):
+    dt = str(datetime.now()).replace(' ', '_').replace(':', '_').replace('.', '_')
+    newdir = f'model_epoch{epoch}_' + dt
+    os.mkdir(newdir)
+    torch.save(encoder.state_dict(), os.path.join(newdir, 'encoder.model'))
+    torch.save(decoder.state_dict(), os.path.join(newdir, 'decoder.model'))
+    with open(os.path.join(newdir, 'source_w2i'), 'wb') as f:
+        pickle.dump(source_w2i, f)
+        f.close()
+    with open(os.path.join(newdir, 'source_i2w'), 'wb') as f:
+        pickle.dump(source_i2w, f)
+        f.close()
+    with open(os.path.join(newdir, 'target_w2i'), 'wb') as f:
+        pickle.dump(target_w2i, f)
+        f.close()
+    with open(os.path.join(newdir, 'target_i2w'), 'wb') as f:
+        pickle.dump(target_i2w, f)
+        f.close()
+
+    settings = {
+        'training_set': args.train,
+        'test_set': args.test,
+        'epochs': args.epochs,
+        'learning_rate': args.learning_rate,
+        'batch_size': args.batch_size,
+        'hidden_size': args.hidden_size,
+        'attention': args.attention,
+        'bidirectional': args.bidirectional,
+        'embedding_size': args.embedding_size,
+        'use_gru': args.gru,
+        'tune_embeddings': args.tune_embeddings
+    }
+    with open(os.path.join(newdir, 'settings.json'), 'w') as f:
+        json.dump(settings, f)

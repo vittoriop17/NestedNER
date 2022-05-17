@@ -109,7 +109,7 @@ if __name__=='__main__':
         else:
             embedding_size = args.hidden_size
             embeddings = None
-
+        args.embedding_size = embedding_size
         training_loader = DataLoader(training_dataset, shuffle=True, batch_size=args.batch_size, collate_fn=PadSequence())
         dev_loader = DataLoader(dev_dataset, shuffle=True, batch_size=args.batch_size, collate_fn=PadSequence())
 
@@ -140,7 +140,7 @@ if __name__=='__main__':
         decoder.train()
 
         print(datetime.now().strftime("%H:%M:%S"), "Starting training.")
-
+        best_val_rouge2 = 0
         for epoch in range(args.epochs):
             total_loss = 0
             for source, target in tqdm.tqdm(training_loader, desc="Epoch {}".format(epoch + 1)):
@@ -192,7 +192,10 @@ if __name__=='__main__':
             total_loss = 0
             # print("Evaluating on the dev data...")
             if epoch % 10 == 0:
-                evaluate(dev_dataset, encoder, decoder, args, "val", run)
+                val_rouge2 = evaluate(dev_dataset, encoder, decoder, args, "val", run)
+                if val_rouge2 > best_val_rouge2:
+                    best_val_rouge2 = val_rouge2
+                    save_model(encoder, decoder, args, epoch)
 
         # ==================== Save the model  ==================== #
 

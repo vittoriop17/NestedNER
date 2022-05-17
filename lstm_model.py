@@ -175,3 +175,4 @@ def evaluate(ds, encoder, decoder, args, test_or_val='val', neptune_run=None):
     result = {k: round(v, 4) for k, v in result.items()}
     print(f"\033[1;32m{json.dumps(result, indent=4)}\033[0m")
     print()
+    return result['rouge2']
