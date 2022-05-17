@@ -82,8 +82,8 @@ class LoadDataset(Dataset):
         tokens = list(no_of_tokens.keys())
         texts = list(no_of_tokens.values())
 
-        plt.bar(range(len(tokens)), texts,width=2)
-        plt.xticks((0,100,200,300,400,500,600,700,800), fontsize = 18)
+        plt.bar(tokens, texts,width=20)
+        #plt.xticks((0,100,200,300,400,500,600,700,800), fontsize = 18)
         plt.xlabel('tokens')
         plt.ylabel('summaries')
         plt.show()
@@ -92,6 +92,7 @@ class LoadDataset(Dataset):
 
         plt.hist(res, density=True, bins=30)
         plt.xlabel('ratio of length of summaries to length of text')
+        plt.ylabel('#occurences')
         plt.show()
         
         print(mean(res))
