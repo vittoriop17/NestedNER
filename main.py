@@ -136,11 +136,12 @@ if __name__=='__main__':
         encoder_optimizer = optim.Adam(encoder.parameters(), lr=args.learning_rate)
         decoder_optimizer = optim.Adam(decoder.parameters(), lr=args.learning_rate)
 
+        encoder.train()
+        decoder.train()
+
         print(datetime.now().strftime("%H:%M:%S"), "Starting training.")
 
         for epoch in range(args.epochs):
-            encoder.train()
-            decoder.train()
             total_loss = 0
             for source, target in tqdm.tqdm(training_loader, desc="Epoch {}".format(epoch + 1)):
                 encoder_optimizer.zero_grad()
@@ -186,44 +187,10 @@ if __name__=='__main__':
                 total_loss += loss
                 run['train/batch_loss'].log(loss.detach().item())
             app_loss = total_loss.detach().item()
-            print(datetime.now().strftime("%H:%M:%S"), "Epoch", epoch+1, "loss:", app_loss)
+            print(datetime.now().strftime("%H:%M:%S"), "Epoch", epoch, "loss:", app_loss)
             run['train/epoch_loss'].log(app_loss)
             total_loss = 0
-            # ---------------------------------------------------------------------------------------
-            encoder.eval()
-            decoder.eval()
-            print("Evaluating on the dev data...")
-            for source, target in tqdm.tqdm(dev_loader, desc="Epoch {}".format(epoch + 1)):
-                loss = 0
-                # hidden is (D * num_layers, B, H)
-                outputs, hidden, cell = encoder(source)
-                if args.bidirectional:
-                    hidden = torch.cat([hidden[0, :, :], hidden[1, :, :]], dim=1).unsqueeze(0)
-                    cell = torch.cat([cell[0, :, :], cell[1, :, :]], dim=1).unsqueeze(0)
-                # The input to the decoder in the first time step will be
-                # the boundary symbol, regardless if we are using teacher
-                # forcing or not.
-                idx = [target_w2i[START_SYMBOL] for sublist in target]
-                predicted_symbol = [target_w2i[START_SYMBOL] for sublist in target]
-                target_length = len(target[0])
-                for i in range(target_length):
-                    # Here we input the previous prediction rather than the
-                    # correct symbol.
-                    predictions, hidden, cell = decoder(inp=predicted_symbol, hidden_state=hidden, cell_state=cell, encoder_outputs=outputs, idx=i)
-                    _, predicted_tensor = predictions.topk(1)
-                    predicted_symbol = predicted_tensor.squeeze().tolist()
-                    # The targets will be the ith symbol of all the target
-                    # strings. They will also be used as inputs for the next
-                    # time step if we use teacher forcing.
-                    idx = [sublist[i] for sublist in target]
-                    loss += criterion(predictions.squeeze(), torch.tensor(idx).to(device))
-                loss /= (target_length * args.batch_size)
-                total_loss += loss
-                run['val/batch_loss'].log(loss.detach().item())
-            app_loss = total_loss.detach().item()
-            print(datetime.now().strftime("%H:%M:%S"), "Epoch", epoch+1, "loss:", app_loss)
-            run['val/epoch_loss'].log(app_loss)
-            total_loss = 0
+            # print("Evaluating on the dev data...")
             if epoch % 10 == 0:
                 evaluate(dev_dataset, encoder, decoder, args, "val", run)
 
