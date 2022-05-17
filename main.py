@@ -1,3 +1,5 @@
+from torch.optim.lr_scheduler import StepLR
+
 from utils import *
 import neptune.new as neptune
 from lstm_model import *
@@ -135,7 +137,8 @@ if __name__=='__main__':
 
         encoder_optimizer = optim.Adam(encoder.parameters(), lr=args.learning_rate)
         decoder_optimizer = optim.Adam(decoder.parameters(), lr=args.learning_rate)
-
+        encoder_scheduler = StepLR(encoder_optimizer, step_size=10, gamma=0.1)
+        decoder_scheduler = StepLR(decoder_optimizer, step_size=10, gamma=0.1)
         encoder.train()
         decoder.train()
 
@@ -186,6 +189,8 @@ if __name__=='__main__':
                 decoder_optimizer.step()
                 total_loss += loss
                 run['train/batch_loss'].log(loss.detach().item())
+            encoder_scheduler.step()
+            decoder_scheduler.step()
             app_loss = total_loss.detach().item()
             print(datetime.now().strftime("%H:%M:%S"), "Epoch", epoch, "loss:", app_loss)
             run['train/epoch_loss'].log(app_loss)
