@@ -4,6 +4,7 @@ from utils import *
 import neptune.new as neptune
 from lstm_model import *
 import tqdm
+import dataset
 
 
 def load_and_eval_hugging_face_model(args):
@@ -54,7 +55,7 @@ if __name__=='__main__':
         source_i2w = pickle.load(open(os.path.join(args.load, "source_i2w"), 'rb'))
         target_w2i = pickle.load(open(os.path.join(args.load, "target_w2i"), 'rb'))
         target_i2w = pickle.load(open(os.path.join(args.load, "target_i2w"), 'rb'))
-
+        dataset.source_w2i, dataset.i2w, dataset.target_w2i, dataset.target_i2w = source_w2i, source_i2w, target_w2i, target_i2w
         settings = json.load(open(os.path.join(args.load, "settings.json")))
 
         use_attention = settings['attention']
