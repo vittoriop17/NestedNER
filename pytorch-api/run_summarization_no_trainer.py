@@ -710,60 +710,60 @@ def main():
             accelerator.save_state(output_dir)
 
     # TODO - comment this part
-    # if eval_dataloader:
-    #     gen_kwargs = {
-    #         "max_length": args.val_max_target_length if args is not None else config.max_length,
-    #         "num_beams": args.num_beams,
-    #     }
-    #     samples_seen = 0
-    #     for step, batch in enumerate(eval_dataloader):
-    #         with torch.no_grad():
-    #             generated_tokens = accelerator.unwrap_model(model).generate(
-    #                 batch["input_ids"],
-    #                 attention_mask=batch["attention_mask"],
-    #                 **gen_kwargs,
-    #             )
-    #
-    #             generated_tokens = accelerator.pad_across_processes(
-    #                 generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
-    #             )
-    #             labels = batch["labels"]
-    #             if not args.pad_to_max_length:
-    #                 # If we did not pad to max length, we need to pad the labels too
-    #                 labels = accelerator.pad_across_processes(batch["labels"], dim=1, pad_index=tokenizer.pad_token_id)
-    #
-    #             generated_tokens, labels = accelerator.gather((generated_tokens, labels))
-    #             generated_tokens = generated_tokens.cpu().numpy()
-    #             labels = labels.cpu().numpy()
-    #
-    #             if args.ignore_pad_token_for_loss:
-    #                 # Replace -100 in the labels as we can't decode them.
-    #                 labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    #             if isinstance(generated_tokens, tuple):
-    #                 generated_tokens = generated_tokens[0]
-    #             decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-    #             decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-    #
-    #             decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-    #             # If we are in a multiprocess environment, the last batch has duplicates
-    #             if accelerator.num_processes > 1:
-    #                 if step == len(eval_dataloader):
-    #                     decoded_preds = decoded_preds[: len(eval_dataloader.dataset) - samples_seen]
-    #                     decoded_labels = decoded_labels[: len(eval_dataloader.dataset) - samples_seen]
-    #                 else:
-    #                     samples_seen += decoded_labels.shape[0]
-    #
-    #             metric.add_batch(
-    #                 predictions=decoded_preds,
-    #                 references=decoded_labels,
-    #             )
-    #     result = metric.compute(use_stemmer=True)
-    #     # Extract a few results from ROUGE
-    #     result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
-    #
-    #     result = {k: round(v, 4) for k, v in result.items()}
-    #
-    #     logger.info(result)
+    if eval_dataloader and args.epochs == 0:
+        gen_kwargs = {
+            "max_length": args.val_max_target_length if args is not None else config.max_length,
+            "num_beams": args.num_beams,
+        }
+        samples_seen = 0
+        for step, batch in enumerate(eval_dataloader):
+            with torch.no_grad():
+                generated_tokens = accelerator.unwrap_model(model).generate(
+                    batch["input_ids"],
+                    attention_mask=batch["attention_mask"],
+                    **gen_kwargs,
+                )
+
+                generated_tokens = accelerator.pad_across_processes(
+                    generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
+                )
+                labels = batch["labels"]
+                if not args.pad_to_max_length:
+                    # If we did not pad to max length, we need to pad the labels too
+                    labels = accelerator.pad_across_processes(batch["labels"], dim=1, pad_index=tokenizer.pad_token_id)
+
+                generated_tokens, labels = accelerator.gather((generated_tokens, labels))
+                generated_tokens = generated_tokens.cpu().numpy()
+                labels = labels.cpu().numpy()
+
+                if args.ignore_pad_token_for_loss:
+                    # Replace -100 in the labels as we can't decode them.
+                    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+                if isinstance(generated_tokens, tuple):
+                    generated_tokens = generated_tokens[0]
+                decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+                decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+                decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+                # If we are in a multiprocess environment, the last batch has duplicates
+                if accelerator.num_processes > 1:
+                    if step == len(eval_dataloader):
+                        decoded_preds = decoded_preds[: len(eval_dataloader.dataset) - samples_seen]
+                        decoded_labels = decoded_labels[: len(eval_dataloader.dataset) - samples_seen]
+                    else:
+                        samples_seen += decoded_labels.shape[0]
+
+                metric.add_batch(
+                    predictions=decoded_preds,
+                    references=decoded_labels,
+                )
+        result = metric.compute(use_stemmer=True)
+        # Extract a few results from ROUGE
+        result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
+
+        result = {k: round(v, 4) for k, v in result.items()}
+
+        logger.info(result)
 
     if args.output_dir is not None:
         accelerator.wait_for_everyone()
