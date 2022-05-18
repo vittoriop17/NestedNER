@@ -710,7 +710,7 @@ def main():
             accelerator.save_state(output_dir)
 
     # TODO - comment this part
-    if eval_dataloader and args.epochs == 0:
+    if eval_dataloader and args.num_train_epochs == 0:
         gen_kwargs = {
             "max_length": args.val_max_target_length if args is not None else config.max_length,
             "num_beams": args.num_beams,
