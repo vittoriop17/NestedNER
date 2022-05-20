@@ -34,10 +34,11 @@ if __name__=='__main__':
     # Decode the command-line arguments
     args = read_args()
     # initialize NEPTUNE client
-    run = neptune.init(
-        project="vittoriop.17/WikiHowSummarization",
-        api_token=os.getenv("NEPTUNE_API_TOKEN"))  # your credentials
-    run['parameters'] = args.__dict__
+    if args.neptune:
+        run = neptune.init(
+            project="vittoriop.17/WikiHowSummarization",
+            api_token=os.getenv("NEPTUNE_API_TOKEN"))  # your credentials
+        run['parameters'] = args.__dict__
 
     is_cuda_available = torch.cuda.is_available()
     print("Is CUDA available? {}".format(is_cuda_available))
@@ -189,12 +190,14 @@ if __name__=='__main__':
                 encoder_optimizer.step()
                 decoder_optimizer.step()
                 total_loss += loss
-                run['train/batch_loss'].log(loss.detach().item())
+                if args.neptune:
+                    run['train/batch_loss'].log(loss.detach().item())
             encoder_scheduler.step()
             decoder_scheduler.step()
             app_loss = total_loss.detach().item()
             print(datetime.now().strftime("%H:%M:%S"), "Epoch", epoch, "loss:", app_loss)
-            run['train/epoch_loss'].log(app_loss)
+            if args.neptune:
+                run['train/epoch_loss'].log(app_loss)
             total_loss = 0
             # print("Evaluating on the dev data...")
             if epoch % 10 == 0:
@@ -313,5 +316,6 @@ if __name__=='__main__':
             attention_probs.insert(0, first_row)
             t = AsciiTable(attention_probs)
             print(t.table)
-    run.stop()
+    if args.neptune:
+        run.stop()
 

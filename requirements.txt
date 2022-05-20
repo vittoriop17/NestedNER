@@ -13,3 +13,4 @@ torch >= 1.3
 transformers
 terminaltables
 prettytable
+flask
